@@ -1,0 +1,16 @@
+{
+  "name": "whatsapp-delete-alert-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp que detecta mensajes eliminados y reporta a Telegram.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "qrcode-terminal": "^0.12.0",
+    "telegraf": "^4.16.3",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}
