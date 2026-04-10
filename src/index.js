@@ -205,36 +205,63 @@ function buildTelegramReport(snapshot, deletedAtMs) {
       : snapshot.originType === 'Estado'
         ? 'Estado'
         : 'Chat privado';
-  const mediaStatus = snapshot.hasMedia
-    ? snapshot.mediaInfo?.error
-      ? `Fallida: ${snapshot.mediaInfo.error}`
-      : `Capturada: ${snapshot.mediaInfo.fileName}`
-    : 'Sin multimedia';
+  
+  // Información detallada de multimedia
+  let mediaStatus = 'Sin multimedia';
+  let mediaDetails = '';
+  if (snapshot.hasMedia) {
+    if (snapshot.mediaInfo?.error) {
+      mediaStatus = `❌ Fallida: ${snapshot.mediaInfo.error}`;
+    } else {
+      mediaStatus = `✅ Capturada`;
+      const sizeKB = ((snapshot.mediaInfo.sizeBytes || 0) / 1024).toFixed(2);
+      const sizeMB = (sizeKB / 1024).toFixed(2);
+      const sizeDisplay = sizeKB >= 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+      mediaDetails = `📁 Archivo: \`${escapeMarkdownV2(snapshot.mediaInfo.fileName)}\`
+📊 Tamaño: *${escapeMarkdownV2(sizeDisplay)}* (${snapshot.mediaInfo.sizeBytes || 0} bytes)
+📎 MIME: \`${escapeMarkdownV2(snapshot.mediaInfo.mimetype)}\``;
+    }
+  }
+  
   const participant = snapshot.author ? snapshot.author.replace('@c.us', '') : null;
   const content = snapshot.body === '[Sin texto]' ? '_Sin texto visible_' : escapeMarkdownV2(snapshot.body);
+  const messageId = snapshot.key ? snapshot.key.slice(0, 16) + '...' : 'No disponible';
 
   const lines = [
     '🚨 *ALERTA DE MENSAJE ELIMINADO*',
-    '_Se recupero el contenido antes de que desapareciera del chat_',
+    '_Se recuperó el contenido antes de que desapareciera del chat_',
     '',
-    '• *IDENTIDAD*',
-    `👤 Nombre: *${escapeMarkdownV2(snapshot.displayName)}*`,
-    `📱 Numero: \`${escapeMarkdownV2(snapshot.phoneNumber)}\``,
-    participant ? `🧾 Autor en grupo: \`${escapeMarkdownV2(participant)}\`` : null,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '👤 *IDENTIDAD DEL REMITENTE*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `📛 Nombre: *${escapeMarkdownV2(snapshot.displayName)}*`,
+    `📱 Número: \`${escapeMarkdownV2(snapshot.phoneNumber)}\``,
+    participant ? `🧾 Autor (grupo): \`${escapeMarkdownV2(participant)}\`` : null,
     '',
-    '• *CONTEXTO*',
-    `📍 Origen: *${escapeMarkdownV2(snapshot.originType)}*`,
-    `🧭 Ubicacion: *${escapeMarkdownV2(locationDetails)}*`,
-    `🗂️ Tipo: \`${escapeMarkdownV2(snapshot.type)}\``,
-    `💾 Multimedia: ${escapeMarkdownV2(mediaStatus)}`,
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '📍 *CONTEXTO Y UBICACIÓN*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    `🏷️ Origen: *${escapeMarkdownV2(snapshot.originType)}*`,
+    `📌 Ubicación: *${escapeMarkdownV2(locationDetails)}*`,
+    `📦 Tipo de mensaje: \`${escapeMarkdownV2(snapshot.type)}\``,
+    `💾 Estado multimedia: ${mediaStatus}`,
+    mediaDetails ? mediaDetails : null,
     '',
-    '• *TIEMPOS*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '⏱️ *LÍNEA DE TIEMPO*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     `🕒 Enviado: ${escapeMarkdownV2(formatTimestamp(snapshot.timestampSeconds))}`,
     `🗑️ Eliminado: ${escapeMarkdownV2(deletedAtText)}`,
-    `⏳ Tiempo transcurrido: *${escapeMarkdownV2(formatElapsed(elapsedMs))}*`,
+    `⏳ Tiempo en pantalla: *${escapeMarkdownV2(formatElapsed(elapsedMs))}*`,
+    `🆔 ID Mensaje: \`${escapeMarkdownV2(messageId)}\``,
     '',
-    '• *CONTENIDO RECUPERADO*',
-    content
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '📝 *CONTENIDO RECUPERADO*',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    content,
+    '',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    'ℹ️ _Bot de monitoreo activo_'
   ].filter(Boolean);
 
   return lines.join('\n');
@@ -250,13 +277,22 @@ function buildTelegramCaption(snapshot, deletedAtMs) {
         ? 'Estado'
         : 'Chat privado';
   const participant = snapshot.author ? snapshot.author.replace('@c.us', '') : null;
+  
+  // Información compacta de multimedia para caption
+  let mediaInfo = '';
+  if (snapshot.hasMedia && !snapshot.mediaInfo?.error) {
+    const sizeKB = ((snapshot.mediaInfo.sizeBytes || 0) / 1024).toFixed(2);
+    const sizeDisplay = sizeKB >= 1024 ? `${(sizeKB / 1024).toFixed(2)} MB` : `${sizeKB} KB`;
+    mediaInfo = ` | 📎 ${escapeMarkdownV2(sizeDisplay)}`;
+  }
+  
   const baseLines = [
     '🚨 *ALERTA DE MENSAJE ELIMINADO*',
     `👤 *${escapeMarkdownV2(snapshot.displayName)}*`,
     `📱 \`${escapeMarkdownV2(snapshot.phoneNumber)}\``,
     participant ? `🧾 \`${escapeMarkdownV2(participant)}\`` : null,
-    `📍 *${escapeMarkdownV2(snapshot.originType)}* \\| ${escapeMarkdownV2(locationDetails)}`,
-    `🗂️ \`${escapeMarkdownV2(snapshot.type)}\` \\| ⏳ *${escapeMarkdownV2(formatElapsed(elapsedMs))}*`,
+    `📍 *${escapeMarkdownV2(snapshot.originType)}* | ${escapeMarkdownV2(locationDetails)}${mediaInfo}`,
+    `⏳ *${escapeMarkdownV2(formatElapsed(elapsedMs))}*`,
     '',
     '📝 *Contenido recuperado:*'
   ].filter(Boolean);
