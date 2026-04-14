@@ -5,7 +5,10 @@
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/index.js"
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "restart": "pm2 restart whatsapp-delete-alert-bot || pm2 start ecosystem.config.cjs",
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
